@@ -6,24 +6,22 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka_akka_streams.AkkaActors.Dispatcher.JsonParser.{Parse, ParseResponse}
 import akka_akka_streams.AkkaActors.Dispatcher.LogWorker.LogResponse
 import akka_akka_streams.AkkaActors.Dispatcher.TaskDispatcher.{LogWork, ParseUrl}
-//import akka_akka_streams.AkkaActors.Dispatcher.JsonParser.{Parse, ParseResponse}
-//import akka_akka_streams.AkkaActors.Dispatcher.LogWorker.{LogRequest, LogResponse}
-//import akka_akka_streams.AkkaActors.Dispatcher.TaskDispatcher.{LogWork, ParseUrl}
 
 import java.util.UUID
 
-object Dispatcher extends App {
-  object  TaskDispatcher{
-    sealed trait CommandDispatcher
+object Dispatcher extends App{
+  object TaskDispatcher{
+    trait CommandDispatcher
 
     case class ParseUrl(url: String) extends CommandDispatcher
     case class LogWork(url: String) extends CommandDispatcher
     case class LogResponseWrapper(msg: LogResponse) extends CommandDispatcher
     case class ParseResponseWrapper(msg: ParseResponse) extends CommandDispatcher
 
-    def apply(): Behavior[CommandDispatcher] = Behaviors.setup{ctx =>
-      val logAdapter  = ctx.messageAdapter[LogResponse](rs => LogResponseWrapper(rs))
-      val parseAdapter = ctx.messageAdapter[ParseResponse](rs => ParseResponseWrapper(rs))
+    def apply(): Behavior[CommandDispatcher] = Behaviors.setup{ ctx =>
+      val logAdapter = ctx.messageAdapter[LogResponse] (rs => LogResponseWrapper(rs))
+      val parseAdapter = ctx.messageAdapter[ParseResponse] (rs => ParseResponseWrapper(rs))
+
 
       Behaviors.receiveMessage{
         case LogWork(work) =>
@@ -31,53 +29,44 @@ object Dispatcher extends App {
           ctx.log.info(s"Dispatcher got log ${work}")
           logWorker ! LogWorker.Log(work, logAdapter)
           Behaviors.same
-
         case ParseUrl(url) =>
           val urlParse = ctx.spawn(JsonParser(), s"JsonParser${UUID.randomUUID()}")
-          ctx.log.info(s"Dispatcher got url $url")
+          ctx.log.info(s"Dispatcher got url ${url}")
           urlParse ! Parse(url, parseAdapter)
           Behaviors.same
-
-        case LogResponseWrapper(m) =>
-          ctx.log.info("Log done")
+        case LogResponseWrapper(msg) =>
+          ctx.log.info(s"Log done")
           Behaviors.same
-        case ParseResponseWrapper(m) =>
-          ctx.log.info("Parse done")
+        case ParseResponseWrapper(msg) =>
+          ctx.log.info(s"Parse done")
           Behaviors.same
-
       }
-
     }
-
-
   }
 
-  object LogWorker {
-    sealed  trait LogRequest
-
-    case class Log(l: String, replyTo: ActorRef[LogResponse]) extends LogRequest
+  object LogWorker{
+    sealed trait LogRequest
+    case class Log(l: String, reply: ActorRef[LogResponse]) extends  LogRequest
 
     sealed trait LogResponse
-
     case class LogDone() extends LogResponse
 
     def apply(): Behavior[LogRequest] = Behaviors.setup{ctx =>
       Behaviors.receiveMessage{
         case Log(l, replyTo) =>
           ctx.log.info("log work in progress")
-          replyTo! LogDone()
+          replyTo ! LogDone()
           Behaviors.stopped
       }
     }
   }
 
   object JsonParser {
-    sealed trait  ParseCommand
-
+    sealed trait ParseCommand
     case class Parse(json: String, replyTo: ActorRef[ParseResponse]) extends ParseCommand
 
-    sealed trait ParseResponse
-    case class ParseDone() extends  ParseResponse
+    sealed  trait ParseResponse
+    case class ParseDone() extends ParseResponse
 
     def apply(): Behavior[ParseCommand] = Behaviors.setup{ ctx =>
       Behaviors.receiveMessage{
@@ -87,7 +76,6 @@ object Dispatcher extends App {
           Behaviors.stopped
       }
     }
-
   }
 
   def apply(): Behavior[NotUsed] =
@@ -100,11 +88,13 @@ object Dispatcher extends App {
       Behaviors.same
     }
 
-  implicit val system = ActorSystem(Dispatcher(), "disp_actor_system")
+  implicit  val system = ActorSystem(Dispatcher(), "disp_actor_system")
 
   Thread.sleep(3000)
   system.terminate()
 
 
 
+
 }
+

@@ -8,11 +8,11 @@ import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
 
 import scala.concurrent.Future
 
-object AkkaStreams extends App{
-  implicit val system = ActorSystem("fusion")
-  implicit val materializer = ActorMaterializer()
-
+object AkkaStreams extends  App {
+  implicit val system  = ActorSystem("dddd")
+  implicit  val materializer = ActorMaterializer()
   val source: Source[Int, NotUsed] = Source(1 to 10)
+
   val flow = Flow[Int].map(x=>x+1)
   val sink = Sink.foreach[Int](println)
 
@@ -20,7 +20,6 @@ object AkkaStreams extends App{
   val graph2 = source.via(flow).to(sink)
 
 //  graph2.run()
-
 
   val simpleSource = Source(1 to 10)
   val simpleFlow = Flow[Int].map(_+1)
@@ -31,11 +30,11 @@ object AkkaStreams extends App{
     .via(simpleFlow)
     .via(simpleFlow2)
     .to(simpleSink)
-//  graph3.run()
+  //graph3.run()
 
-  val hardFlow3 = Flow[Int].map{x=>
+  val hardFlow3 = Flow[Int].map { x=>
     Thread.sleep(1000)
-    x+1
+    x+10
   }
 
   val hardFlow4 = Flow[Int].map{x=>
@@ -48,5 +47,12 @@ object AkkaStreams extends App{
     .via(hardFlow4).async
     .to(simpleSink)
     .run()
+
+
+
+
+
+
+
 
 }
