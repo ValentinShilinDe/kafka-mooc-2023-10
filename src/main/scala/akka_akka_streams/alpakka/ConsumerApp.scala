@@ -15,10 +15,12 @@ import ch.qos.logback.classic.{Level, Logger}
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.slf4j.LoggerFactory
 
-object ConsumerApp extends  App {
+
+object ConsumerApp extends App{
   implicit val system: ActorSystem = ActorSystem("consumer-sys")
-  implicit  val mat: Materializer = ActorMaterializer()
+  implicit val mat: Materializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = system.dispatcher
+
   LoggerFactory
     .getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)
     .asInstanceOf[Logger]
@@ -27,13 +29,16 @@ object ConsumerApp extends  App {
   val config = ConfigFactory.load()
   val consumerConfig = config.getConfig("akka.kafka.consumer")
   val consumerSettings = ConsumerSettings(consumerConfig, new StringDeserializer, new StringDeserializer)
-  val consume = Consumer
+
+  val consumer = Consumer
     .plainSource(consumerSettings, Subscriptions.topics("test"))
     .runWith(Sink.foreach(println))
 
-  consume onComplete {
+  consumer onComplete{
     case Success(_) => println("Done"); system.terminate()
     case Failure(err) => println(err.toString); system.terminate()
+
   }
+
 
 }

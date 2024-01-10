@@ -18,7 +18,7 @@ object MainApp extends ZIOAppDefault {
     ZStream
       .repeatZIO(Random.nextIntBetween(0, Int.MaxValue))
       .schedule(Schedule.fixed(2.seconds))
-      .mapZIO{ random =>
+      .mapZIO { random =>
         Producer.produce[Any, Long, String](
           topic = "random",
           key = random % 4,
@@ -32,30 +32,30 @@ object MainApp extends ZIOAppDefault {
   val consumer =
     Consumer
       .plainStream(Subscription.topics("random"), Serde.long, Serde.string)
-      .tap(r=> Console.printLine(r.value))
+      .tap(r=>Console.printLine(r.value))
       .map(_.offset)
       .aggregateAsync(Consumer.offsetBatches)
       .mapZIO(_.commit)
       .drain
 
-
   def producerLayer =
     ZLayer.scoped(
       Producer.make(
-        settings = ProducerSettings(List("localhost:29092"))
+        settings =  ProducerSettings(List("localhost:29093"))
       )
     )
 
   def consumerLayer =
     ZLayer.scoped(
       Consumer.make(
-        ConsumerSettings(List("localhost:29092")).withGroupId("group")
+        ConsumerSettings(List("localhost:29093")).withGroupId("group")
       )
-
     )
-
   override def run =
     producer.merge(consumer)
       .runDrain
       .provide(producerLayer, consumerLayer)
+
+
+
 }
